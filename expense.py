@@ -2,6 +2,7 @@ import argparse
 import csv
 import os
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 FILENAME = "expenses.csv"
 
@@ -98,6 +99,58 @@ def summary_expenses(category=None, month=None):
     print(f"Total Spent: ${total:.2f}")
     print("-----------------------\n")
 
+def plot_expenses():
+    """Generate a bar chart of expenses by category."""
+    if not os.path.exists(FILENAME):
+        print("No expenses to plot.")
+        return
+
+    # Dictionary to hold totals per category
+    category_totals = {}
+
+    with open(FILENAME, mode='r') as f:
+        reader = csv.reader(f)
+        next(reader) # Skip header
+        
+        for row in reader:
+            # row = [Date, Description, Category, Amount]
+            if len(row) < 4: continue # Safety check
+            
+            category = row[2]
+            amount = float(row[3])
+            
+            if category in category_totals:
+                category_totals[category] += amount
+            else:
+                category_totals[category] = amount
+
+    if not category_totals:
+        print("No data to plot.")
+        return
+
+    # --- PLOTTING ---
+    categories = list(category_totals.keys())
+    amounts = list(category_totals.values())
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(categories, amounts, color='skyblue', edgecolor='black')
+    
+    plt.title("Total Expenses by Category", fontsize=16)
+    plt.xlabel("Category", fontsize=12)
+    plt.ylabel("Amount ($)", fontsize=12)
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    
+    # Add value labels on top of bars
+    for i, v in enumerate(amounts):
+        plt.text(i, v + 0.5, f"${v:.2f}", ha='center', fontweight='bold')
+
+    # Save the file
+    output_file = "expenses_chart.png"
+    plt.savefig(output_file)
+    plt.close() # Close the plot to free memory
+    
+    print(f"📊 Chart saved as '{output_file}'")
+
 def main():
     init_file()
     
@@ -113,10 +166,13 @@ def main():
     # LIST Command
     subparsers.add_parser("list", help="List all expenses")
 
-    # SUMMARY Command (New!)
+    # SUMMARY Command
     parser_summary = subparsers.add_parser("summary", help="View summary of expenses")
     parser_summary.add_argument("--category", type=str, help="Filter by category")
     parser_summary.add_argument("--month", type=int, help="Filter by month (1-12)")
+    
+    # PLOT Command
+    subparsers.add_parser("plot", help="Generate a bar chart of expenses")
 
     args = parser.parse_args()
 
@@ -126,6 +182,8 @@ def main():
         list_expenses()
     elif args.command == "summary":
         summary_expenses(args.category, args.month)
-
+    elif args.command == "plot":
+        plot_expenses()
+        
 if __name__ == "__main__":
     main()
